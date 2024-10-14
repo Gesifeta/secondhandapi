@@ -6,7 +6,6 @@ const bodyParser = require('body-parser')
 const cors = require('cors')
 const path = require('path')
 const pinoLogger = require('./logger')
-const { loadData } = require("../../util/import-mongo/index")
 const serverless=require('serverless-http')
 
 const connectToDatabase = require('./models/db')
