@@ -1,6 +1,8 @@
 /* jshint esversion: 8 */
 require('dotenv').config()
 const express = require('express')
+const bodyParser = require('body-parser')
+
 const cors = require('cors')
 const path = require('path')
 const pinoLogger = require('./logger')
@@ -10,13 +12,17 @@ const serverless=require('serverless-http')
 const connectToDatabase = require('./models/db')
 
 const app = express()
+
+//const port = process.env.PORT || 3000
 //  Connect to MongoDB we just do this one time
+
 connectToDatabase().then(() => {
   pinoLogger.info('Connected to DB')
 })
   .catch((e) => console.error('Failed to connect to DB', e))
 
 app.use(express.json())
+app.use(bodyParser.urlencoded({ extended: true }))
 const userRoutes = require('./routes/userRoutes')
 
 const secondChanceItemsRoutes = require('./routes/secondChanceItemsRoutes')
@@ -35,7 +41,7 @@ const corsOptions = {
 };
 
 app.use("*",cors(corsOptions));
-app.use('/api/', (req, res, next) => {
+app.use('/.netlify/functions/api', (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
@@ -47,11 +53,11 @@ app.use('/api/', (req, res, next) => {
 });
 
 app.use(pinoHttp({ logger }))
-app.use('/api/images',express.static(path.join(__dirname, 'public','images')))
-app.use('/api/', userRoutes)
-app.use('/api/', secondChanceItemsRoutes)
-app.use('/api/', searchRoutes)
-app.get('/api/', (req, res) => {
+app.use('/images',express.static(path.join(__dirname, 'public','images')))
+app.use('/.netlify/functions/api', userRoutes)
+app.use('/.netlify/functions/api', secondChanceItemsRoutes)
+app.use('/.netlify/functions/api', searchRoutes)
+app.get('/.netlify/functions/api', (req, res) => {
   res.send(`
     
     <h1>Second Chance API</h1>
@@ -80,5 +86,14 @@ app.get('/api/', (req, res) => {
 
     `)
 })  
+app.use((error, req, res, next) => {
+  res.status(500)
+  res.send({error: error})
+  console.error(error.stack)
+  next(error)
+})
 loadData()
+// app.listen(port, () => {
+//   console.log(`Server is running on PORT ${port}`)
+// })
 module.exports.handler=serverless(app)
